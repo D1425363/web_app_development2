@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}購物清單 - {{ recipe.title }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0 rounded-4 p-5" id="printableArea">
+            <div class="text-center mb-4">
+                <h2 class="fw-bold mb-0">🛒 採買清單</h2>
+                <p class="text-muted">食譜：{{ recipe.title }}</p>
+            </div>
+
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th width="10%">#</th>
+                        <th>材料</th>
+                        <th width="30%">份量</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if ingredients %}
+                        {% for idx, item in enumerate(ingredients, start=1) %}
+                        <tr>
+                            <td><input type="checkbox" class="form-check-input"></td>
+                            <td>{{ item.name }}</td>
+                            <td>{{ item.amount }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="3" class="text-center text-muted">目前沒有材料資料。</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+
+            <div class="text-center mt-4 no-print">
+                <button onclick="window.print()" class="btn btn-dark">🖨️ 列印清單</button>
+                <a href="{{ url_for('recipe.detail', recipe_id=recipe.id) }}" class="btn btn-link text-muted">返回食譜</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+@media print {
+    .no-print, .navbar, footer { display: none !important; }
+    body { background-color: white !important; }
+    .card { box-shadow: none !important; }
+}
+</style>
+{% endblock %}

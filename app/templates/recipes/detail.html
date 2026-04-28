@@ -1,6 +1,108 @@
 {% extends "base.html" %}
 
+{% block title %}{{ recipe.title }} - 數位食譜管理平台{% endblock %}
+
 {% block content %}
-<h2>食譜詳情</h2>
-<!-- 留空，待實作時填入食譜內容、材料、步驟與筆記 -->
+<div class="row">
+    <div class="col-md-8">
+        <div class="card shadow-sm border-0 rounded-4 p-4 mb-4">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <h2 class="fw-bold mb-0">{{ recipe.title }}</h2>
+                <div>
+                    <a href="{{ url_for('recipe.edit_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-secondary btn-sm">編輯</a>
+                    <form action="{{ url_for('recipe.delete_recipe', recipe_id=recipe.id) }}" method="POST" class="d-inline" onsubmit="return confirm('確定要刪除這份食譜嗎？');">
+                        <button type="submit" class="btn btn-outline-danger btn-sm">刪除</button>
+                    </form>
+                </div>
+            </div>
+            
+            <p class="text-muted">{{ recipe.description or '無簡介' }}</p>
+            
+            <div class="mb-4">
+                {% if recipe.tags %}
+                    {% for tag in recipe.tags.split(',') %}
+                        <span class="badge badge-tag">{{ tag.strip() }}</span>
+                    {% endfor %}
+                {% endif %}
+            </div>
+
+            <hr>
+
+            <h4 class="fw-bold mb-3">🍳 料理步驟</h4>
+            <div class="list-group list-group-flush">
+                {% if steps %}
+                    {% for step in steps %}
+                    <div class="list-group-item border-0 ps-0">
+                        <div class="d-flex">
+                            <span class="badge bg-secondary me-3" style="height: fit-content;">{{ step.step_order }}</span>
+                            <p class="mb-0">{{ step.instruction }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">尚未設定步驟。</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card shadow-sm border-0 rounded-4 p-4">
+            <h4 class="fw-bold mb-3">📝 料理筆記與心得</h4>
+            <form action="{{ url_for('recipe.add_note', recipe_id=recipe.id) }}" method="POST" class="mb-4">
+                <div class="mb-3">
+                    <textarea name="content" class="form-control" rows="3" placeholder="記錄這次的實作心得（如：火候、味道調整...）" required></textarea>
+                </div>
+                <div class="d-flex align-items-center mb-3">
+                    <label class="me-3">評分：</label>
+                    <select name="rating" class="form-select form-select-sm" style="width: auto;">
+                        <option value="5">⭐⭐⭐⭐⭐</option>
+                        <option value="4">⭐⭐⭐⭐</option>
+                        <option value="3">⭐⭐⭐</option>
+                        <option value="2">⭐⭐</option>
+                        <option value="1">⭐</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm">儲存筆記</button>
+            </form>
+
+            <div class="notes-list">
+                {% if notes %}
+                    {% for note in notes %}
+                    <div class="border-bottom pb-3 mb-3">
+                        <div class="d-flex justify-content-between">
+                            <span class="text-warning">
+                                {% for i in range(note.rating or 0) %}⭐{% endfor %}
+                            </span>
+                            <small class="text-muted">{{ note.created_at }}</small>
+                        </div>
+                        <p class="mt-2 mb-0">{{ note.content }}</p>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted small">目前還沒有筆記。</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card shadow-sm border-0 rounded-4 p-4 mb-4 sticky-top" style="top: 2rem;">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="fw-bold mb-0">🛒 材料清單</h4>
+                <a href="{{ url_for('recipe.shopping_list', recipe_id=recipe.id) }}" class="btn btn-link btn-sm p-0">產生購物清單</a>
+            </div>
+            <ul class="list-group list-group-flush">
+                {% if ingredients %}
+                    {% for item in ingredients %}
+                    <li class="list-group-item border-0 ps-0 d-flex justify-content-between">
+                        <span>{{ item.name }}</span>
+                        <span class="text-muted">{{ item.amount }}</span>
+                    </li>
+                    {% endfor %}
+                {% else %}
+                    <li class="list-group-item border-0 ps-0 text-muted">尚未設定材料。</li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</div>
 {% endblock %}

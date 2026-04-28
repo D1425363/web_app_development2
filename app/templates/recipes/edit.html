@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}新增食譜 - 數位食譜管理平台{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card shadow-sm border-0 rounded-4 p-4">
+            <h2 class="fw-bold mb-4 text-center">✨ 建立新食譜</h2>
+            
+            <form action="{{ url_for('recipe.new_recipe') }}" method="POST">
+                <div class="mb-4">
+                    <label class="form-label fw-bold">食譜名稱</label>
+                    <input type="text" name="title" class="form-control form-control-lg" placeholder="例如：阿嬤的紅燒肉" required>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold">食譜簡介 (選填)</label>
+                    <textarea name="description" class="form-control" rows="2" placeholder="簡單描述這道菜的特色..."></textarea>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold">標籤 (選填，請用逗號分隔)</label>
+                    <input type="text" name="tags" class="form-control" placeholder="例如：中式, 家常, 快速">
+                </div>
+
+                <hr class="my-4">
+
+                <div class="row">
+                    <div class="col-md-5">
+                        <h4 class="fw-bold mb-3">🛒 材料清單</h4>
+                        <div id="ingredients-container">
+                            <div class="input-group mb-2 ingredient-row">
+                                <input type="text" name="ingredient_name[]" class="form-control" placeholder="材料名稱" required>
+                                <input type="text" name="ingredient_amount[]" class="form-control" placeholder="份量 (例: 150g)">
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-outline-secondary btn-sm mt-2" onclick="addIngredientRow()">+ 新增材料</button>
+                    </div>
+
+                    <div class="col-md-7">
+                        <h4 class="fw-bold mb-3">🍳 料理步驟</h4>
+                        <div id="steps-container">
+                            <div class="input-group mb-2 step-row">
+                                <span class="input-group-text">1</span>
+                                <textarea name="step_instruction[]" class="form-control" rows="1" placeholder="描述步驟內容..." required></textarea>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-outline-secondary btn-sm mt-2" onclick="addStepRow()">+ 新增步驟</button>
+                    </div>
+                </div>
+
+                <div class="text-center mt-5">
+                    <a href="{{ url_for('recipe.index') }}" class="btn btn-link text-muted me-3">取消</a>
+                    <button type="submit" class="btn btn-primary btn-lg px-5">儲存食譜</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function addIngredientRow() {
+    const container = document.getElementById('ingredients-container');
+    const div = document.createElement('div');
+    div.className = 'input-group mb-2 ingredient-row';
+    div.innerHTML = `
+        <input type="text" name="ingredient_name[]" class="form-control" placeholder="材料名稱">
+        <input type="text" name="ingredient_amount[]" class="form-control" placeholder="份量">
+        <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">×</button>
+    `;
+    container.appendChild(div);
+}
+
+function addStepRow() {
+    const container = document.getElementById('steps-container');
+    const rows = container.getElementsByClassName('step-row');
+    const nextNum = rows.length + 1;
+    const div = document.createElement('div');
+    div.className = 'input-group mb-2 step-row';
+    div.innerHTML = `
+        <span class="input-group-text">${nextNum}</span>
+        <textarea name="step_instruction[]" class="form-control" rows="1" placeholder="描述步驟內容..."></textarea>
+        <button type="button" class="btn btn-outline-danger" onclick="removeStepRow(this)">×</button>
+    `;
+    container.appendChild(div);
+}
+
+function removeStepRow(btn) {
+    btn.parentElement.remove();
+    // 重新編號
+    const rows = document.getElementById('steps-container').getElementsByClassName('step-row');
+    for (let i = 0; i < rows.length; i++) {
+        rows[i].querySelector('.input-group-text').innerText = i + 1;
+    }
+}
+</script>
+{% endblock %}
