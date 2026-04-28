@@ -1,4 +1,8 @@
-from flask import Blueprint, render_template, request, redirect, url_for, abort
+from flask import Blueprint, render_template, request, redirect, url_for, abort, flash
+from ..models.recipe import Recipe
+from ..models.ingredient import Ingredient
+from ..models.step import Step
+from ..models.note import Note
 
 recipe_bp = Blueprint('recipe', __name__)
 
@@ -7,60 +11,164 @@ recipe_bp = Blueprint('recipe', __name__)
 def index():
     """
     顯示所有食譜列表。
-    輸入: 可選 URL 參數 ?tag=xxx 用於標籤過濾。
-    邏輯: 呼叫 Recipe.get_all()。
-    輸出: 渲染 recipes/index.html。
+    支援標籤過濾。
     """
-    pass
+    tag_filter = request.args.get('tag')
+    all_recipes = Recipe.get_all()
+    
+    if tag_filter:
+        # 簡單的標籤過濾邏輯（在 Python 端過濾）
+        filtered_recipes = [r for r in all_recipes if tag_filter in (r.get('tags') or '')]
+        return render_template('recipes/index.html', recipes=filtered_recipes, current_tag=tag_filter)
+    
+    return render_template('recipes/index.html', recipes=all_recipes)
 
 @recipe_bp.route('/recipes/new', methods=['GET', 'POST'])
 def new_recipe():
     """
-    GET: 顯示新增食譜表單。
-    POST: 接收表單資料，呼叫 Model 建立食譜、材料與步驟，成功後重導向至詳情頁。
+    新增食譜。
+    GET: 顯示表單。
+    POST: 儲存資料。
     """
-    pass
+    if request.method == 'POST':
+        title = request.form.get('title')
+        description = request.form.get('description')
+        tags = request.form.get('tags')
+        
+        # 取得多個材料與步驟
+        ingredient_names = request.form.getlist('ingredient_name[]')
+        ingredient_amounts = request.form.getlist('ingredient_amount[]')
+        step_instructions = request.form.getlist('step_instruction[]')
+
+        if not title:
+            flash('食譜標題為必填欄位！')
+            return render_template('recipes/new.html')
+
+        # 1. 建立食譜主體
+        recipe_id = Recipe.create(title, description, tags)
+        
+        if recipe_id:
+            # 2. 建立材料
+            for name, amount in zip(ingredient_names, ingredient_amounts):
+                if name.strip():
+                    Ingredient.create(recipe_id, name, amount)
+            
+            # 3. 建立步驟
+            for i, instr in enumerate(step_instructions):
+                if instr.strip():
+                    Step.create(recipe_id, i + 1, instr)
+            
+            flash('食譜建立成功！')
+            return redirect(url_for('recipe.detail', recipe_id=recipe_id))
+        else:
+            flash('建立食譜時發生錯誤。')
+            return render_template('recipes/new.html')
+
+    return render_template('recipes/new.html')
 
 @recipe_bp.route('/recipes/<int:recipe_id>')
 def detail(recipe_id):
     """
-    顯示單筆食譜詳細內容。
-    邏輯: 呼叫 Recipe.get_by_id(), Ingredient.get_by_recipe(), Step.get_by_recipe(), Note.get_by_recipe()
-    輸出: 渲染 recipes/detail.html。如果找不到回傳 404。
+    食譜詳情頁面。
     """
-    pass
+    recipe = Recipe.get_by_id(recipe_id)
+    if not recipe:
+        abort(404)
+    
+    ingredients = Ingredient.get_by_recipe(recipe_id)
+    steps = Step.get_by_recipe(recipe_id)
+    notes = Note.get_by_recipe(recipe_id)
+    
+    return render_template('recipes/detail.html', 
+                           recipe=recipe, 
+                           ingredients=ingredients, 
+                           steps=steps, 
+                           notes=notes)
 
 @recipe_bp.route('/recipes/<int:recipe_id>/edit', methods=['GET', 'POST'])
 def edit_recipe(recipe_id):
     """
-    GET: 取得現有食譜資料並顯示編輯表單。
-    POST: 接收表單修改後的資料，更新 DB，成功後重導向至詳情頁。
+    編輯食譜。
     """
-    pass
+    recipe = Recipe.get_by_id(recipe_id)
+    if not recipe:
+        abort(404)
+
+    if request.method == 'POST':
+        title = request.form.get('title')
+        description = request.form.get('description')
+        tags = request.form.get('tags')
+        
+        ingredient_names = request.form.getlist('ingredient_name[]')
+        ingredient_amounts = request.form.getlist('ingredient_amount[]')
+        step_instructions = request.form.getlist('step_instruction[]')
+
+        if not title:
+            flash('食譜標題不能為空！')
+            return render_template('recipes/edit.html', recipe=recipe)
+
+        # 更新食譜主體
+        if Recipe.update(recipe_id, title, description, tags):
+            # 更新材料與步驟（採先刪後增策略）
+            Ingredient.delete_by_recipe(recipe_id)
+            for name, amount in zip(ingredient_names, ingredient_amounts):
+                if name.strip():
+                    Ingredient.create(recipe_id, name, amount)
+            
+            Step.delete_by_recipe(recipe_id)
+            for i, instr in enumerate(step_instructions):
+                if instr.strip():
+                    Step.create(recipe_id, i + 1, instr)
+            
+            flash('食譜更新成功！')
+            return redirect(url_for('recipe.detail', recipe_id=recipe_id))
+        else:
+            flash('更新食譜時發生錯誤。')
+
+    # GET 請求時需抓取現有材料與步驟
+    ingredients = Ingredient.get_by_recipe(recipe_id)
+    steps = Step.get_by_recipe(recipe_id)
+    
+    return render_template('recipes/edit.html', 
+                           recipe=recipe, 
+                           ingredients=ingredients, 
+                           steps=steps)
 
 @recipe_bp.route('/recipes/<int:recipe_id>/delete', methods=['POST'])
 def delete_recipe(recipe_id):
     """
     刪除食譜。
-    邏輯: 呼叫 Recipe.delete(recipe_id) 刪除食譜及其關聯資料。
-    輸出: 重導向至首頁。
     """
-    pass
+    if Recipe.delete(recipe_id):
+        flash('食譜已刪除。')
+    else:
+        flash('刪除食譜時發生錯誤。')
+    return redirect(url_for('recipe.index'))
 
 @recipe_bp.route('/recipes/<int:recipe_id>/notes', methods=['POST'])
 def add_note(recipe_id):
     """
-    新增食譜筆記與評價。
-    邏輯: 接收 content 與 rating 表單，呼叫 Note.create()。
-    輸出: 重導向回食譜詳情頁。
+    新增筆記。
     """
-    pass
+    content = request.form.get('content')
+    rating = request.form.get('rating')
+    
+    if content:
+        Note.create(recipe_id, content, rating)
+        flash('筆記已儲存。')
+    else:
+        flash('筆記內容不能為空。')
+        
+    return redirect(url_for('recipe.detail', recipe_id=recipe_id))
 
 @recipe_bp.route('/recipes/<int:recipe_id>/shopping-list')
 def shopping_list(recipe_id):
     """
-    顯示該食譜所需的材料購物清單。
-    邏輯: 呼叫 Ingredient.get_by_recipe() 取得材料。
-    輸出: 渲染 recipes/shopping_list.html。
+    產生購物清單。
     """
-    pass
+    recipe = Recipe.get_by_id(recipe_id)
+    if not recipe:
+        abort(404)
+        
+    ingredients = Ingredient.get_by_recipe(recipe_id)
+    return render_template('recipes/shopping_list.html', recipe=recipe, ingredients=ingredients)

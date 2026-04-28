@@ -1,6 +1,42 @@
 {% extends "base.html" %}
 
+{% block title %}食譜列表 - 數位食譜管理平台{% endblock %}
+
 {% block content %}
-<h2>食譜列表</h2>
-<!-- 留空，待實作時填入迴圈顯示食譜卡片 -->
+<div class="row mb-4 align-items-center">
+    <div class="col">
+        <h2 class="fw-bold">我的食譜收藏</h2>
+        {% if current_tag %}
+            <p class="text-muted">正在篩選標籤：<span class="badge bg-primary">{{ current_tag }}</span> 
+            <a href="{{ url_for('recipe.index') }}" class="ms-2 text-decoration-none small">清除篩選</a></p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-4">
+    {% if recipes %}
+        {% for recipe in recipes %}
+        <div class="col-md-4">
+            <div class="card h-100 recipe-card">
+                <div class="card-body">
+                    <h5 class="card-title fw-bold">{{ recipe.title }}</h5>
+                    <p class="card-text text-truncate">{{ recipe.description or '無簡介' }}</p>
+                    <div class="mb-3">
+                        {% if recipe.tags %}
+                            {% for tag in recipe.tags.split(',') %}
+                                <a href="{{ url_for('recipe.index', tag=tag.strip()) }}" class="badge badge-tag">{{ tag.strip() }}</a>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    <a href="{{ url_for('recipe.detail', recipe_id=recipe.id) }}" class="btn btn-outline-primary btn-sm">查看詳情</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="col-12 text-center py-5">
+            <p class="text-muted">目前還沒有食譜，快去新增一個吧！</p>
+        </div>
+    {% endif %}
+</div>
 {% endblock %}
